@@ -330,7 +330,70 @@ function random_sprayer(time, path, opt = {}, opt2 = {})
 					let bullet = projectile_1(time, {
 						enemy: !!opt.enemy,
 						pos: [p[0], p[1]],
-						rot: [c * this.rot[0] - s * this.rot[1], s * this.rot[0] + c * this.rot[1]],
+						rot: [c, s],
+						speed: spd,
+						size: opt2.size ? opt2.size : 3 / 256,
+						sprite: opt2.sprite ? opt2.sprite : precomp.bullet,
+						color: opt2.color ? opt2.color : "#B0B",
+					});
+					game.field.add(bullet, re_rect(bullet));
+				}
+			}
+			return t < dead;
+		},
+	};
+}
+
+function uniform_sprayer(time, path, opt = {}, opt2 = {})
+{
+	let st = time + (opt.start_delay ? opt.start_delay : 0) * 1000;
+	let cool = opt.cooldown ? opt.cooldown : 1000;
+	let mult = opt.multiplier ? opt.multiplier : 1;
+	let spd = opt2.speed ? opt2.speed : 0.125;
+	let omega = opt.omega ? opt.omega : 0;
+	let rot = opt.rot ? Math.atan2(opt.rot[1], opt.rot[0]) : Math.PI / 2;
+	let rotb = opt2.rot ? Math.atan2(opt.rot[1], opt.rot[0]) : -Math.PI / 2;
+	let roti = opt2.rot_inc ? opt2.rot_inc : Math.PI * (Math.sqrt(5) - 1);
+	let f = make_hermite_path(path);
+	let dead = path.at(-7);
+	return {
+		rot: opt.rot ? [opt.rot[0], opt.rot[1]] : [0, 1],
+		pos: [0.5, 0.5],
+		size: opt.size ? opt.size : 1 / 16,
+		enemy: !!opt.enemy,
+		hitbox: !!opt.hitbox,
+		shootable: true,
+		sprite: opt.sprite ? opt.sprite : precomp.e_sprayer,
+		color: opt.color ? opt.color : "#F0F",
+		hp: opt.hp ? opt.hp : 20,
+		bigp: opt.bigp,
+		smallp: opt.smallp,
+		radp: opt.radp,
+
+		start_tick: time,
+		spawn_tick: st,
+		theta: rotb,
+		tick(game, time)
+		{
+			let t = (time - this.start_tick) / 1000;
+			let p = f(t);
+			this.pos[0] = p[0];
+			this.pos[1] = p[1];
+			let r = rot + omega * t;
+			this.rot[0] = Math.cos(r);
+			this.rot[1] = Math.sin(r);
+			if (time - this.spawn_tick >= cool)
+			{
+				this.spawn_tick = time;
+				for (let i = 0; i < mult; i++)
+				{
+					let c = Math.cos(this.theta);
+					let s = Math.sin(this.theta);
+					this.theta += roti;
+					let bullet = projectile_1(time, {
+						enemy: !!opt.enemy,
+						pos: [p[0], p[1]],
+						rot: [c, s],
 						speed: spd,
 						size: opt2.size ? opt2.size : 3 / 256,
 						sprite: opt2.sprite ? opt2.sprite : precomp.bullet,
@@ -424,7 +487,7 @@ function make_player(time, gameplay_state)
 					color: "#F007",
 				}) : projectile_2(time, {
 					pos: [this.pos[0] + this.shoot_dir, this.pos[1] + 0.0625],
-					damage: 0.75,
+					damage: 0.875,
 					omega: Math.sign(this.shoot_dir) * focus * 4 * Math.PI,
 					color: "#F007",
 				});
@@ -697,6 +760,134 @@ function make_enemy(time)
 			radp: 0.125,
 		}, {
 			sprite: precomp.bullet,
+		}),
+	70, (g, t) => uniform_sprayer(t, [
+			0.25, 1.25,
+			24, 0.25, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	74, (g, t) => uniform_sprayer(t, [
+			0.75, 1.25,
+			24, 0.75, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	78, (g, t) => uniform_sprayer(t, [
+			0.25, 1.25,
+			24, 0.25, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	82, (g, t) => uniform_sprayer(t, [
+			0.75, 1.25,
+			24, 0.75, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	86, (g, t) => uniform_sprayer(t, [
+			0.25, 1.25,
+			24, 0.25, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	90, (g, t) => uniform_sprayer(t, [
+			0.75, 1.25,
+			24, 0.75, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	100, (g, t) => uniform_sprayer(t, [
+			1.25, 0.875,
+			1, 0.5, 0.75, -0.75, 0, 0, 0,
+			19, 0.5, 0.75, 0, 0, 0, 0,
+			20, -0.25, 0.875, 0, 0, -0.75, 0,
+		], {
+			start_delay: 0,
+			cooldown: 150,
+			multiplier: 15,
+			enemy: true,
+			omega: Math.PI,
+			hp: 100,
+			smallp: 5,
+			bigp: 3,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			speed: 0.25,
 		}),
 	];
 	let idx = 0;

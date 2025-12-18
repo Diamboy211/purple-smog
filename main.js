@@ -267,6 +267,14 @@ function char_select(game, time)
 		if (t >= 1)
 		{
 			gameplay_state.transition_left = 1;
+			gameplay_state.left = false;
+			gameplay_state.right = false;
+			gameplay_state.up = false;
+			gameplay_state.down = false;
+			gameplay_state.focus = false;
+			gameplay_state.shoot = false;
+			gameplay_state.real_time = time;
+			gameplay_state.slow_time = time;
 			game_init(game, time);
 			return gameplay;
 		}
@@ -332,8 +340,10 @@ let gameplay_state = {
 	right: false,
 	focus: false,
 	shoot: false,
+	real_time: 0,
+	slow_time: 0,
+	last_dt: 16,
 	transition_left: 1,
-	last_ticks: new Array(20).fill(0),
 }
 
 function game_death_rad(game)
@@ -452,8 +462,12 @@ function gameplay(game, time)
 		},
 	});
 
-	//time = Math.min(game.last_tick + 100 / 3, time);
-	let dt = (time - game.last_tick) / 1000;
+	let real_dt = time - gameplay_state.real_time;
+	let dt = Math.min(real_dt, 50);
+	gameplay_state.slow_time += dt;
+	gameplay_state.real_time = time;
+	time = gameplay_state.slow_time;
+	dt /= 1000;
 	game.last_tick = time;
 	gameplay_state.transition_left = Math.max(0, gameplay_state.transition_left - dt);
 
@@ -571,8 +585,12 @@ function gameplay(game, time)
 	ctx.fillStyle = "#F5F7";
 	fill_text(ctx, `lives: ${Math.max(game.lives, 0)}`, 0, 1, 0.0625);
 	ctx.textAlign = "right";
-	ctx.fillStyle = "#F55";
+	ctx.fillStyle = "#F557";
 	fill_text(ctx, `power: ${(player.power / 100).toFixed(2)}`, 1, 1, 0.0625);
+	ctx.textBaseline = "bottom";
+	ctx.fillStyle = "#7777";
+	gameplay_state.last_dt = gameplay_state.last_dt * 0.9375 + real_dt * 0.0625;
+	fill_text(ctx, `${(1000 / gameplay_state.last_dt).toFixed(2)} fps`, 1, 0, 0.0625);
 
 	if (gameplay_state.transition_left > 0)
 	{
