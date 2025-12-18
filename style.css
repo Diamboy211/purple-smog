@@ -1,0 +1,22 @@
+html
+{
+	height: 100%;
+}
+
+body
+{
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	background: url('./asd.png');
+}
+
+#canvas
+{
+	padding: 0;
+	margin: 0;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, calc(-0.5px - 50%));
+}
