@@ -74,10 +74,12 @@ function hashgrid_new()
 			for (let y = sy; y < ey; y++)
 				for (let x = sx; x < ex; x++)
 					next_idx.add(y * DIV + x);
-			let del_idx = prev_idx.difference(next_idx);
-			for (let i of del_idx) s.grid[i].delete(id);
-			let add_idx = next_idx.difference(prev_idx);
-			for (let i of add_idx) s.grid[i].add(id);
+			for (let i of prev_idx)
+				if (!next_idx.has(i))
+					s.grid[i].delete(id);
+			for (let i of next_idx)
+				if (!prev_idx.has(i))
+					s.grid[i].add(id);
 		},
 		get(rect)
 		{
@@ -113,7 +115,8 @@ function hashgrid_new()
 			let entities = new Set;
 			for (let i = sy; i < ey; i++)
 				for (let j = sx; j < ex; j++)
-					entities = entities.union(s.grid[i * DIV + j]);
+					for (let k of s.grid[i * DIV + j])
+						entities.add(k);
 			return entities;
 		},
 	};
