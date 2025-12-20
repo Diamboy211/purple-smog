@@ -501,9 +501,10 @@ function gameplay(game, time)
 	for (let id of game.player_bullets)
 	{
 		let bullet = game.field.entities.get(id);
-		let c = game.field.get_coarse(bullet).intersection(game.enemies);
+		let c = game.field.get_coarse(bullet);
 		for (let id2 of c)
 		{
+			if (!game.enemies.has(id2)) continue;
 			let e = game.field.entities.get(id2);
 			if (Math.hypot(e.pos[0] - bullet.pos[0], e.pos[1] - bullet.pos[1]) < e.size + bullet.size)
 			{
