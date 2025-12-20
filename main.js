@@ -273,6 +273,7 @@ function char_select(game, time)
 			gameplay_state.down = false;
 			gameplay_state.focus = false;
 			gameplay_state.shoot = false;
+			gameplay_state.pausing = false;
 			gameplay_state.real_time = time;
 			gameplay_state.slow_time = time;
 			game_init(game, time);
@@ -301,38 +302,6 @@ function char_select(game, time)
 	return char_select;
 }
 
-// [x0, y0,
-// node end time, xn, yn, xn', yn', xn+1', yn+1',
-// ...]
-// next call t >= prev call t
-function make_hermite_path(nodes)
-{
-	let last_t = 0;
-	let curr_idx = 2;
-	let last_x = nodes[0];
-	let last_y = nodes[1];
-	return t =>
-	{
-		while (curr_idx < nodes.length && t >= nodes[curr_idx])
-		{
-			last_t = nodes[curr_idx];
-			last_x = nodes[curr_idx + 1];
-			last_y = nodes[curr_idx + 2];
-			curr_idx += 7;
-		}
-		if (curr_idx >= nodes.length) return [last_x, last_y];
-		let ri = nodes[curr_idx] - last_t;
-		let rt = (t - last_t) / ri;
-		let bp1 = (2 * rt - 3) * rt * rt + 1;
-		let bv1 = ((rt - 2) * rt + 1) * rt * ri;
-		let bp2 = (-2 * rt + 3) * rt * rt;
-		let bv2 = (rt - 1) * rt * rt * ri;
-		let x = bp1 * last_x + bp2 * nodes[curr_idx + 1] + bv1 * nodes[curr_idx + 3] + bv2 * nodes[curr_idx + 5];
-		let y = bp1 * last_y + bp2 * nodes[curr_idx + 2] + bv1 * nodes[curr_idx + 4] + bv2 * nodes[curr_idx + 6];
-		return [x, y];
-	};
-}
-
 let gameplay_state = {
 	up: false,
 	down: false,
@@ -340,6 +309,7 @@ let gameplay_state = {
 	right: false,
 	focus: false,
 	shoot: false,
+	pausing: false,
 	real_time: 0,
 	slow_time: 0,
 	last_dt: 16,
@@ -415,12 +385,15 @@ function gameplay(game, time)
 				gameplay_state.right = true;
 				break;
 			case "ShiftLeft":
+			case "ShiftRight":
 				gameplay_state.focus = true;
 				break;
 			case "KeyZ":
 			case "Space":
 				gameplay_state.shoot = true;
 				break;
+			case "Escape":
+				gameplay_state.pausing = !gameplay_state.pausing;
 			default:
 				break;
 			}
@@ -464,7 +437,8 @@ function gameplay(game, time)
 
 	let real_dt = time - gameplay_state.real_time;
 	let dt = Math.min(real_dt, 50);
-	gameplay_state.slow_time += dt;
+	if (!gameplay_state.pausing) gameplay_state.slow_time += dt;
+	else dt = 0;
 	gameplay_state.real_time = time;
 	time = gameplay_state.slow_time;
 	dt /= 1000;
@@ -507,9 +481,9 @@ function gameplay(game, time)
 			game.field.remove(id);
 			continue;
 		}
-		if (e.shootable && e.hp <= 0)
+		if (e.enemy && e.shootable && e.hp <= 0)
 		{
-			let pspawner = power_spawner(time, { origin: e.pos, big: e.bigp, small: e.smallp, radius: e.radp, });
+			let pspawner = power_spawner(time, { origin: e.pos, big: e.bigp, small: e.smallp, oneup: e.oneup, radius: e.radp, });
 			game.field.add(pspawner);
 			game.field.remove(id);
 			continue;
@@ -568,11 +542,17 @@ function gameplay(game, time)
 				game.death_center[1] = player.pos[1];
 				player.pos[0] = 0.5;
 				player.pos[1] = 0.0625;
+
+				let drop_p = Math.max(10, player.power - 50);
+				player.power = 0;
+				let pspawner = power_spawner(time, { origin: game.death_center, big: Math.floor(drop_p / 5), small: drop_p % 5, radius: 0.125, velocity: [0, 0.125] });
+				game.field.add(pspawner);
 			}
 			if (!e.enemy && e.shootable
 				&& Math.hypot(e.pos[0] - player.pos[0], e.pos[1] - player.pos[1]) < e.size + player.size)
 			{
-				player.power = Math.min(500, player.power + e.power);
+				if (e.hp == 0) player.power = Math.min(500, player.power + e.power);
+				else game.lives++;
 				game.field.remove(id);
 			}
 		}
@@ -596,6 +576,16 @@ function gameplay(game, time)
 	{
 		ctx.fillStyle = "#777";
 		ctx.fillRect(0, 0, 1, gameplay_state.transition_left);
+	}
+
+	if (gameplay_state.pausing)
+	{
+		ctx.fillStyle = "#000A";
+		ctx.fillRect(0, 0, 1, 1);
+		ctx.fillStyle = "#FFF";
+		ctx.textBaseline = "middle";
+		ctx.textAlign = "center";
+		fill_text(ctx, "pause", 0.5, 0.5, 0.125);
 	}
 
 	if (game.lives < 0 && game.death_timer <= 0)

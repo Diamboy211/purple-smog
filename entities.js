@@ -1,3 +1,35 @@
+// [x0, y0,
+// node end time, xn, yn, xn', yn', xn+1', yn+1',
+// ...]
+// next call t >= prev call t
+function make_hermite_path(nodes)
+{
+	let last_t = 0;
+	let curr_idx = 2;
+	let last_x = nodes[0];
+	let last_y = nodes[1];
+	return t =>
+	{
+		while (curr_idx < nodes.length && t >= nodes[curr_idx])
+		{
+			last_t = nodes[curr_idx];
+			last_x = nodes[curr_idx + 1];
+			last_y = nodes[curr_idx + 2];
+			curr_idx += 7;
+		}
+		if (curr_idx >= nodes.length) return [last_x, last_y];
+		let ri = nodes[curr_idx] - last_t;
+		let rt = (t - last_t) / ri;
+		let bp1 = (2 * rt - 3) * rt * rt + 1;
+		let bv1 = ((rt - 2) * rt + 1) * rt * ri;
+		let bp2 = (-2 * rt + 3) * rt * rt;
+		let bv2 = (rt - 1) * rt * rt * ri;
+		let x = bp1 * last_x + bp2 * nodes[curr_idx + 1] + bv1 * nodes[curr_idx + 3] + bv2 * nodes[curr_idx + 5];
+		let y = bp1 * last_y + bp2 * nodes[curr_idx + 2] + bv1 * nodes[curr_idx + 4] + bv2 * nodes[curr_idx + 6];
+		return [x, y];
+	};
+}
+
 function projectile_1(time, opt = {})
 {
 	const spd = opt.speed ? opt.speed : 1.5;
@@ -89,6 +121,7 @@ function power(time, opt = {})
 		enemy: false,
 		hitbox: !!opt.hitbox,
 		shootable: true,
+		hp: opt.hp ? opt.hp : 0,
 		sprite: opt.sprite ? opt.sprite : precomp.power,
 		color: opt.color ? opt.color : "#F55",
 
@@ -129,6 +162,7 @@ function power_spawner(time, opt = {})
 {
 	let big = opt.big ? opt.big : 0;
 	let small = opt.small ? opt.small : 0;
+	let oneup = opt.oneup ? opt.oneup : 0;
 
 	return {
 		rot: [1, 0],
@@ -169,6 +203,21 @@ function power_spawner(time, opt = {})
 					acceleration: opt.acceleration,
 				});
 				game.field.add(smallp);
+			}
+			for (let i = 0; i < oneup; i++)
+			{
+				let up = power(time, {
+					origin: opt.origin,
+					radius: opt.radius,
+					power: 5,
+					hp: 1,
+					sprite: precomp.oneup,
+					color: "#0B0",
+					hitbox: opt.hitbox,
+					velocity: opt.velocity,
+					acceleration: opt.acceleration,
+				});
+				game.field.add(up);
 			}
 			return false;
 		}
@@ -220,7 +269,7 @@ function sprayer(time, path, opt = {}, opt2 = {})
 						sprite: opt2.sprite ? opt2.sprite : precomp.bullet,
 						color: opt2.color ? opt2.color : "#B0B",
 					});
-					game.field.add(bullet, re_rect(bullet));
+					game.field.add(bullet);
 				}
 			}
 			return t < dead;
@@ -275,7 +324,7 @@ function aimer(time, path, id, opt = {}, opt2 = {})
 					sprite: opt2.sprite ? opt2.sprite : precomp.bullet,
 					color: opt2.color ? opt2.color : "#B0B",
 				});
-				game.field.add(bullet, re_rect(bullet));
+				game.field.add(bullet);
 			}
 			return t < dead;
 		},
@@ -336,7 +385,7 @@ function random_sprayer(time, path, opt = {}, opt2 = {})
 						sprite: opt2.sprite ? opt2.sprite : precomp.bullet,
 						color: opt2.color ? opt2.color : "#B0B",
 					});
-					game.field.add(bullet, re_rect(bullet));
+					game.field.add(bullet);
 				}
 			}
 			return t < dead;
@@ -352,7 +401,7 @@ function uniform_sprayer(time, path, opt = {}, opt2 = {})
 	let spd = opt2.speed ? opt2.speed : 0.125;
 	let omega = opt.omega ? opt.omega : 0;
 	let rot = opt.rot ? Math.atan2(opt.rot[1], opt.rot[0]) : Math.PI / 2;
-	let rotb = opt2.rot ? Math.atan2(opt.rot[1], opt.rot[0]) : -Math.PI / 2;
+	let rotb = opt2.rot ? Math.atan2(opt2.rot[1], opt2.rot[0]) : -Math.PI / 2;
 	let roti = opt2.rot_inc ? opt2.rot_inc : Math.PI * (Math.sqrt(5) - 1);
 	let f = make_hermite_path(path);
 	let dead = path.at(-7);
@@ -399,10 +448,107 @@ function uniform_sprayer(time, path, opt = {}, opt2 = {})
 						sprite: opt2.sprite ? opt2.sprite : precomp.bullet,
 						color: opt2.color ? opt2.color : "#B0B",
 					});
-					game.field.add(bullet, re_rect(bullet));
+					game.field.add(bullet);
 				}
 			}
 			return t < dead;
+		},
+	};
+}
+
+function midboss(time)
+{
+	let f = make_hermite_path([
+		0.5, 1.25,
+		5, 0.5, 0.875, 0, -0.125, 0.125, 0
+	]);
+	return {
+		rot: [0, -1],
+		pos: [0.5, 1.25],
+		size: 1 / 4,
+		enemy: true,
+		hitbox: false,
+		shootable: true,
+		sprite: precomp.e_plane,
+		color: "#A5A",
+		hp: 600,
+		bigp: 7,
+		smallp: 15,
+		oneup: 1,
+		radp: 0.1875,
+
+		start_tick: time,
+		curtain_spawn_tick: time + 5000,
+		mob_spawn_tick: time + 10000,
+		mob_spawned: 0,
+		tick(game, time)
+		{
+			let stage = 0;
+			if (this.hp <= 400) stage++;
+			if (this.hp <= 200) stage++;
+			this.sprite = precomp[`e_plane${stage + 1}`];
+			let t = (time - this.start_tick) / 1000;
+			if (t < 5)
+			{
+				let p = f(t);
+				this.pos[0] = p[0];
+				this.pos[1] = p[1];
+			}
+			else
+			{
+				this.pos[0] = Math.sin((t - 5) / 2) * 0.25 + 0.5;
+				this.pos[1] = 0.875;
+			}
+			if (time - this.curtain_spawn_tick >= 300)
+			{
+				this.curtain_spawn_tick = time;
+				for (let i = -2 + stage; i <= 2 - stage; i++)
+				{
+					let bullet = projectile_1(time, {
+						enemy: true,
+						pos: [this.pos[0] + 0.09375 * i, this.pos[1] - 0.1875],
+						rot: [0, -1],
+						speed: 0.25,
+						size: 1 / 128,
+						sprite: precomp.bullet,
+						color: "#F5".concat("0369C"[i+2]),
+					});
+					game.field.add(bullet);
+				}
+			}
+			if (time - this.mob_spawn_tick >= 4000 - stage * 1000)
+			{
+				this.mob_spawn_tick = time;
+				this.mob_spawned++;
+				let path1 = [
+					this.pos[0], 0.9,
+					1, 0.95, 0.9, -2 * (this.pos[0] - 0.95), -0.2, 0, -0.2,
+					6, 0.95, -0.1, 0, -0.2, 0, -0.2,
+				];
+				let path2 = [
+					this.pos[0], 0.9,
+					1, 0.05, 0.9, -2 * (this.pos[0] - 0.05), -0.2, 0, -0.2,
+					6, 0.05, -0.1, 0, -0.2, 0, -0.2,
+				];
+				let paths = [path1, path2];
+				let theta = this.mob_spawned * Math.PI * (Math.sqrt(5) - 1);
+				for (let i = 0; i < 2; i++)
+				{
+					let sub = uniform_sprayer(time, paths[i], {
+						start_delay: 1,
+						cooldown: 200,
+						enemy: true,
+						omega: Math.PI / 4,
+						hp: 1000,
+					}, {
+						sprite: precomp.donut,
+						size: 1 / 64,
+						rot: [Math.cos(theta), Math.sin(theta)],
+					});
+					game.field.add(sub);
+				}
+			}
+			return true;
 		},
 	};
 }
@@ -487,7 +633,6 @@ function make_player(time, gameplay_state)
 					color: "#F007",
 				}) : projectile_2(time, {
 					pos: [this.pos[0] + this.shoot_dir, this.pos[1] + 0.0625],
-					damage: 0.875,
 					omega: Math.sign(this.shoot_dir) * focus * 4 * Math.PI,
 					color: "#F007",
 				});
@@ -869,7 +1014,26 @@ function make_enemy(time)
 			size: 1 / 128,
 			rot_inc: Math.PI / 24,
 		}),
-	100, (g, t) => uniform_sprayer(t, [
+	94, (g, t) => uniform_sprayer(t, [
+			0.5, 1.25,
+			24, 0.5, -0.25, 0, -0.0625, 0, -0.0625,
+		], {
+			start_delay: 1.5,
+			cooldown: 2000,
+			multiplier: 48,
+			enemy: true,
+			omega: Math.PI / 2,
+			hp: 20,
+			smallp: 7,
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot_inc: Math.PI / 24,
+		}),
+	94, null,
+	5, (g, t) => uniform_sprayer(t, [
 			1.25, 0.875,
 			1, 0.5, 0.75, -0.75, 0, 0, 0,
 			19, 0.5, 0.75, 0, 0, 0, 0,
@@ -889,10 +1053,115 @@ function make_enemy(time)
 			size: 1 / 128,
 			speed: 0.25,
 		}),
+	5, null,
+	5, (g, t) => midboss(t),
+	5, null,
 	];
+	for (let i = 0; i < 8; i++)
+	{
+		for (let j = 0; j < 3; j++)
+			enemy_list.push(
+			5 + i*2 + j/3, (g, t) => uniform_sprayer(t, [
+				1.25, 0.75,
+				15, -0.25, 0.75, -0.1, 0, -0.1, 0
+			], {
+				start_delay: -j/2,
+				cooldown: 1500,
+				multiplier: 2,
+				rot: [-1 / Math.sqrt(5), -2 / Math.sqrt(5)],
+				sprite: precomp.e_aimer,
+				enemy: true,
+				hp: 6,
+				smallp: 2,
+				radp: 0.125,
+			}, {
+				sprite: precomp.bullet,
+				rot: [-1 / Math.sqrt(5), -2 / Math.sqrt(5)],
+				rot_inc: Math.PI,
+			})
+			);
+		for (let j = 0; j < 3; j++)
+			enemy_list.push(
+			6 + i*2 + j/3, (g, t) => uniform_sprayer(t, [
+				-0.25, 0.75,
+				15, 1.25, 0.75, 0.1, 0, 0.1, 0
+			], {
+				start_delay: -j/2,
+				cooldown: 1500,
+				multiplier: 2,
+				rot: [1 / Math.sqrt(5), -2 / Math.sqrt(5)],
+				sprite: precomp.e_aimer,
+				enemy: true,
+				hp: 6,
+				smallp: 2,
+				radp: 0.125,
+			}, {
+				sprite: precomp.bullet,
+				rot: [1 / Math.sqrt(5), -2 / Math.sqrt(5)],
+				rot_inc: Math.PI,
+				speed: 0.1875,
+			})
+			);
+	}
+	for (let i = 0; i < 10; i++)
+		enemy_list.push(
+		35 + i/2, (g, t) => aimer(t, [
+			0.125, -0.25,
+			2, 0.3125, 0.875, 0, 1, 0.25, 0,
+			4, 0.5, 0.625, 0.25, 0, 0, -0.125,
+			6, -0.25, 0.5, 0, -0.125, -1, 0,
+		], g.player_id, {
+			cooldown: 500,
+			enemy: true,
+			hp: 2,
+			smallp: 3,
+			radp: 0.125,
+		}, {
+			speed: 0.25,
+		}),
+		35 + i/2, (g, t) => aimer(t, [
+			0.875, -0.25,
+			2, 0.6875, 0.875, 0, 1, -0.25, 0,
+			4, 0.5, 0.625, -0.25, 0, 0, -0.125,
+			6, 1.25, 0.5, 0, -0.125, 1, 0,
+		], g.player_id, {
+			cooldown: 500,
+			enemy: true,
+			hp: 2,
+			smallp: 3,
+			radp: 0.125,
+		}, {
+			speed: 0.25,
+		})
+		);
+	for (let i = 0; i < 10; i++)
+		enemy_list.push(
+		48 + i/5, (g, t) => uniform_sprayer(t, [
+			-0.5, 0.875,
+			1, 0.5, 0.875, 1, 0, 1, 0,
+			1.59, 0.875, 0.5, 1, 0, 0, -1,
+			2.18, 0.5, 0.125, 0, -1, -1, 0,
+			2.77, 0.125, 0.5, -1, 0, 0, 1,
+			3.36, 0.5, 0.875, 0, 1, 1, 0,
+			4.36, 1.5, 0.875, 1, 0, 1, 0,
+		], {
+			start_delay: i / 10,
+			cooldown: 600,
+			multiplier: 8,
+			enemy: true,
+			hp: 4,
+			rot: [Math.cos(Math.PI / 8), Math.sin(Math.PI / 8)],
+			bigp: 1,
+			radp: 0.125,
+		}, {
+			sprite: precomp.bullet,
+			size: 1 / 128,
+			rot: [Math.cos(Math.PI / 8), Math.sin(Math.PI / 8)],
+			rot_inc: Math.PI / 4,
+		})
+		);
 	let idx = 0;
 	let skip = 0;
-	while (enemy_list[idx] < skip) idx += 2;
 	return {
 		rot: [1, 0],
 		pos: [-1, -1],
@@ -900,18 +1169,32 @@ function make_enemy(time)
 		enemy: false,
 		hitbox: false,
 		shootable: false,
-		sprite: precomp.boss,
+		sprite: precomp.e_boss,
 		color: "#555",
 		hp: 12000,
 
 		start_tick: time - skip * 1000,
+		waiting: false,
+		waiting_entity: new Set,
 		tick(game, time)
 		{
 			let t = (time - this.start_tick) / 1000;
-			while (idx < enemy_list.length && t >= enemy_list[idx])
+			let last_id = null;
+			while (!this.waiting && idx < enemy_list.length && t >= enemy_list[idx])
 			{
-				game.field.add(enemy_list[idx + 1](game, time), [game.enemies]);
+				if (enemy_list[idx + 1] == null)
+				{
+					game.field.entities.get(last_id).ref.push(this.waiting_entity);
+					this.waiting_entity.add(last_id);
+					this.waiting = true;
+				}
+				else last_id = game.field.add(enemy_list[idx + 1](game, time), [game.enemies]);
 				idx += 2;
+			}
+			if (this.waiting && this.waiting_entity.size == 0)
+			{
+				this.waiting = false;
+				this.start_tick = time;
 			}
 			return true;
 		},
