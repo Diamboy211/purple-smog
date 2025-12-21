@@ -347,7 +347,7 @@ function draw_bg(ctx, dt, clr)
 	}
 	ctx.fillStyle = "#000";
 	ctx.fillRect(0, 0, 1, 1);
-	ctx.fillStyle = "#221122".concat(Math.max(0, Math.min(34 - clr / 100, 34)).toString(16).padStart(2, '0'));
+	ctx.fillStyle = "#221122".concat(Math.floor(Math.max(0, Math.min(34 - clr / 100, 34))).toString(16).padStart(2, '0'));
 	for (let e of bg_state)
 	{
 		if (e.y > 1) continue;

@@ -927,7 +927,7 @@ function boss_fall(time)
 			this.pos[1] = 1 - 0.0625 * t*t;
 			this.rot[0] = Math.sin(t)
 			this.rot[1] = -Math.cos(t)
-			game.smog_clear_time = time;
+			game.smog_clear_time = this.start_tick;
 			return t < 5;
 		}
 	};
