@@ -326,7 +326,7 @@ function game_death_rad(game)
 
 let bg_state = new Set;
 
-function draw_bg(ctx, dt)
+function draw_bg(ctx, dt, clr)
 {
 	for (let e of bg_state)
 	{
@@ -347,7 +347,7 @@ function draw_bg(ctx, dt)
 	}
 	ctx.fillStyle = "#000";
 	ctx.fillRect(0, 0, 1, 1);
-	ctx.fillStyle = "#2124";
+	ctx.fillStyle = "#221122".concat(Math.max(0, Math.min(34 - clr / 100, 34)).toString(16).padStart(2, '0'));
 	for (let e of bg_state)
 	{
 		if (e.y > 1) continue;
@@ -394,6 +394,7 @@ function gameplay(game, time)
 				break;
 			case "Escape":
 				gameplay_state.pausing = !gameplay_state.pausing;
+				break;
 			default:
 				break;
 			}
@@ -423,6 +424,7 @@ function gameplay(game, time)
 				gameplay_state.right = false;
 				break;
 			case "ShiftLeft":
+			case "ShiftRight":
 				gameplay_state.focus = false;
 				break;
 			case "KeyZ":
@@ -462,7 +464,7 @@ function gameplay(game, time)
 	if (game.death_timer > 0) player.color = "#0000";
 	else if (game.invincible_timer > 0) player.color = "#555".concat("0123456789ABCDEF"[(Math.random() * 16) | 0]);
 	else player.color = "#555F";
-	draw_bg(ctx, dt);
+	draw_bg(ctx, dt, time - game.smog_clear_time);
 	let death_fx_r = game_death_rad(game);
 	if (death_fx_r >= 0)
 	{
@@ -594,6 +596,12 @@ function gameplay(game, time)
 		game_over_state.cont = false;
 		return game_over;
 	}
+	if (game.win_time <= time)
+	{
+		win_screen_state.cont = false;
+		win_screen_state.rot = [0.03125, 0];
+		return win_screen;
+	}
 	return gameplay;
 }
 
@@ -613,7 +621,7 @@ function game_over(game, time)
 		},
 	});
 
-	ctx.fillStyle = "#533";
+	ctx.fillStyle = "#525";
 	ctx.fillRect(0, 0, 1, 1);
 	ctx.font = "1px monospace";
 	ctx.textAlign = "center";
@@ -626,6 +634,49 @@ function game_over(game, time)
 	return game_over;
 }
 
+let win_screen_state = {
+	rot: [0.03125, 0],
+};
+
+function win_screen(game, time)
+{
+	ev_handlers_update({
+		keyup(e)
+		{
+			win_screen_state.cont = true;
+		},
+		mouseup(e)
+		{
+			win_screen_state.cont = true;
+		},
+	});
+
+	ctx.fillStyle = "#050";
+	ctx.fillRect(0, 0, 1, 1);
+
+	const mx = Math.cos(Math.PI * (Math.sqrt(5) - 1)) * 1.0004;
+	const my = Math.sin(Math.PI * (Math.sqrt(5) - 1)) * 1.0004;
+	win_screen_state.rot = [
+		win_screen_state.rot[0] * mx - win_screen_state.rot[1] * my,
+		win_screen_state.rot[0] * my + win_screen_state.rot[1] * mx
+	];
+
+	ctx.fillStyle = "#555";
+	ctx.save();
+	ctx.transform(win_screen_state.rot[0], -win_screen_state.rot[1], win_screen_state.rot[1], win_screen_state.rot[0], 0.5, 0.5);
+	ctx.fill(precomp.ship);
+	ctx.restore();
+	ctx.font = "1px monospace";
+	ctx.textAlign = "center";
+	ctx.textBaseline = "middle";
+	ctx.fillStyle = "#FFF";
+	fill_text(ctx, "you win!!!", 0.5, 0.5625, 0.0625);
+	fill_text(ctx, "press any key", 0.5, 0.4375, 0.0625);
+
+	if (win_screen_state.cont) return title;
+	return win_screen;
+}
+
 function game_init(game, time)
 {
 	game.last_tick = time;
@@ -634,6 +685,8 @@ function game_init(game, time)
 	game.lives = 3;
 	game.death_timer = 0;
 	game.invincible_timer = 0;
+	game.smog_clear_time = Infinity;
+	game.win_time = Infinity;
 	game.death_center = [0.5, 0.0625];
 	game.player_bullets = new Set;
 	game.enemies = new Set;

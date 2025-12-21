@@ -67,22 +67,6 @@ let precomp = {
 		[-3,-3,3,3,-3,null,-1,1,1,2,2,1,1,-1,-1,-2,-2,-1,-1,null,-3].map(e=>e/8),
 		[-3,3,3,-3,-3,null,-2,-2,-1,-1,1,1,2,2,1,1,-1,-1,-2,null,-3].map(e=>e/8)
 	),
-	e_boss: (() =>
-	{
-		let p = new Path2D;
-		const S2_1 = Math.SQRT2 - 1;
-		const S2_2 = Math.SQRT2 - 2;
-		const OPEN_ANGLE = 0.1;
-		p.moveTo(0, -S2_1);
-		p.arc(-S2_1, -S2_1, S2_1, 0, Math.PI / 2, true);
-		p.arc(-S2_1, S2_1, S2_1, -Math.PI / 2, 0, true);
-		p.lineTo(-S2_2, S2_1);
-		p.arc(-S2_2, 0, S2_1, Math.PI / 2, OPEN_ANGLE, true);
-		p.lineTo(-S2_2, 0);
-		p.lineTo(-S2_2 + S2_1 * Math.cos(OPEN_ANGLE), -S2_1 * Math.sin(OPEN_ANGLE));
-		p.arc(-S2_2, 0, S2_1, -OPEN_ANGLE, -Math.PI / 2, true);
-		return p;
-	})(),
 	e_sprayer: (() =>
 	{
 		let p = new Path2D;
@@ -106,4 +90,26 @@ let precomp = {
 		[4,2,2,1,1,0,-1,-1,0,1,1,2,2].map(e=>e/4),
 		[0,1,7,7,1,1,2,-2,-1,-1,-7,-7,-1].map(e=>e/8)
 	),
+	e_spiral: make_path(
+		[8,0,-6,0,4,0,-2,0,0,1,0,-3,0,5,0,-7,0].map(e=>e/8),
+		[0,7,0,-5,0,3,0,-1,0,-1,-2,0,4,0,-6,0,8].map(e=>e/8)
+	),
 };
+
+for (let i = 1; i <= 6; i++)
+	precomp[`e_boss${i}`] = (() =>
+	{
+		let p = new Path2D;
+		const S2_1 = Math.SQRT2 - 1;
+		const S2_2 = Math.SQRT2 - 2;
+		const OPEN_ANGLE = Math.PI * i / 12;
+		p.moveTo(0, -S2_1);
+		p.arc(-S2_1, -S2_1, S2_1, 0, Math.PI / 2, true);
+		p.arc(-S2_1, S2_1, S2_1, -Math.PI / 2, 0, true);
+		p.lineTo(-S2_2, S2_1);
+		p.arc(-S2_2, 0, S2_1, Math.PI / 2, OPEN_ANGLE, true);
+		p.lineTo(-S2_2, 0);
+		p.lineTo(-S2_2 + S2_1 * Math.cos(OPEN_ANGLE), -S2_1 * Math.sin(OPEN_ANGLE));
+		p.arc(-S2_2, 0, S2_1, -OPEN_ANGLE, -Math.PI / 2, true);
+		return p;
+	})();
